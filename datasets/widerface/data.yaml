@@ -1,0 +1,10 @@
+# Path to the dataset root folder
+path: datasets/widerface
+
+# Relative paths to the training and validation image folders
+train: images/train
+val: images/val
+
+# Number and names of classes
+names:
+  0: face
