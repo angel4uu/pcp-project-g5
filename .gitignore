@@ -1,0 +1,20 @@
+# Ignore image and label data inside datasets/
+datasets/**/images/
+datasets/**/labels/
+datasets/**/val/
+datasets/**/train/
+datasets/**/test/
+
+# Or to ignore any val directory under datasets, more general:
+datasets/**/val/
+
+# Ignore LBPH face data
+lbph_data/faces/
+
+# Ignore Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Ignore temporary or system files
+__pycache__/
+*.pyc
+.DS_Store
