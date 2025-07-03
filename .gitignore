@@ -18,3 +18,8 @@ lbph_data/faces/
 __pycache__/
 *.pyc
 .DS_Store
+
+.venv/
+.env/
+env/
+venv/
