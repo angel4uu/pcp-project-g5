@@ -2,6 +2,12 @@ from ultralytics import YOLO
 import cv2
 import time
 import numpy as np
+import torch
+
+# 0. Definir el dispositivo
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Usando dispositivo: {device}")
+print(f"Dispositivo CUDA disponible: {torch.cuda.get_device_name(0)}" if torch.cuda.is_available() else "CUDA no disponible")
 
 # 1. Lectura de frames
 def capturar_video(video_path):
@@ -25,8 +31,9 @@ def inferir(model, frame):
 def postprocesar(frame, results):
     rostros_detectados = 0
     for box in results.boxes:
-        x1, y1, x2, y2 = map(int, box.xyxy[0])
-        conf = float(box.conf[0])
+        # Mover tensores a la CPU con .cpu()
+        x1, y1, x2, y2 = map(int, box.xyxy[0].cpu())
+        conf = float(box.conf[0].cpu())
         if conf > 0.5:
             rostros_detectados += 1
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
@@ -42,6 +49,9 @@ def visualizar(frame):
 # Ejecutar pipeline
 def ejecutar_pipeline(video_path, model_path):
     model = YOLO(model_path)
+    # Mover el modelo a la GPU
+    model.to(device)
+
     cap = capturar_video(video_path)
 
     total_frames = 0
@@ -58,6 +68,10 @@ def ejecutar_pipeline(video_path, model_path):
         frame = preprocesar(frame)
         results = inferir(model, frame)
         frame, faces = postprocesar(frame, results)
+
+        # Sincronizar para asegurar que todo el trabajo
+        # de la GPU (inferir + postpro .cpu()) se mida.
+        torch.cuda.synchronize()
 
         end = time.time()
         tiempos.append(end - start)
@@ -86,4 +100,8 @@ def ejecutar_pipeline(video_path, model_path):
 if __name__ == "__main__":
     video_path = "videos/prueba1.mp4"  # o donde esté el video
     model_path = "../yolov8n-widerface-v2/best.pt"      # o donde esté el modelo
-    ejecutar_pipeline(video_path, model_path)
+    # Esto es para asegurar que se use CUDA.
+    if str(device) == "cuda":
+        ejecutar_pipeline(video_path, model_path)
+    else:
+        print("CUDA no está disponible. Ejecución cancelada.")
