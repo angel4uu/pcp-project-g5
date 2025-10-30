@@ -18,7 +18,6 @@ def capturar_video(video_path):
 
 # 2. Preprocesamiento
 def preprocesar(frame):
-    # Aquí puedes añadir resize, normalización, etc.
     frame_resized = cv2.resize(frame, (640, 480))
     return frame_resized
 
