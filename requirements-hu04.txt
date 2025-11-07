@@ -1,0 +1,51 @@
+# ============================================================================
+# HU-04: Optimización de Inferencia (TensorRT/ONNX)
+# Dependencias Python requeridas
+# ============================================================================
+
+# Core ML/DL
+ultralytics==8.0.220          # YOLOv8
+torch==2.1.0                  # PyTorch (ajustar version CUDA si necesario)
+torchvision==0.16.0           # Visión por computadora
+numpy==1.24.3                 # Cálculos numéricos
+
+# OpenCV (versión contrib necesaria para cv2.face)
+opencv-python==4.8.1.78
+opencv-contrib-python==4.8.1.78
+
+# Interoperabilidad ONNX
+onnx==1.14.1                  # Formato ONNX
+onnxruntime==1.17.0           # ONNX Runtime (CPU)
+onnxruntime-gpu==1.17.0       # ONNX Runtime (CUDA) - opcional
+
+# Utilidades
+scikit-learn==1.3.1           # Métricas y validación
+tqdm==4.66.1                  # Barras de progreso
+Pillow==10.1.0                # Procesamiento de imágenes
+
+# Desarrollo y testing
+pytest==7.4.3                 # Testing
+black==23.11.0                # Code formatting
+pylint==3.0.2                 # Linting
+
+# ============================================================================
+# NOTAS IMPORTANTES
+# ============================================================================
+# 
+# 1. CUDA
+#    Si tienes GPU NVIDIA, instalar versión CUDA de torch:
+#    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+#
+# 2. ONNX Runtime GPU
+#    pip install onnxruntime-gpu  # Requiere CUDA 11.8+
+#
+# 3. TensorRT
+#    Instalar manualmente desde: https://developer.nvidia.com/tensorrt
+#    No está en PyPI debido a requisitos especiales
+#
+# 4. Instalación rápida (Windows PowerShell)
+#    python -m venv .venv
+#    .\.venv\Scripts\Activate.ps1
+#    pip install -r requirements-hu04.txt
+#
+# ============================================================================
