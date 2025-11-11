@@ -1,3 +1,19 @@
+"""
+Este script implementa un pipeline de inferencia de detección de rostros estrictamente
+secuencial que utiliza la aceleración de la Unidad de Procesamiento Gráfico (GPU)
+a través de CUDA y PyTorch.
+
+Características del Flujo:
+1.  Aceleración de Cálculo (GPU Paralelo):
+    - El modelo de YOLO se mueve a la memoria de la GPU (model.to('cuda')).
+    - La etapa de inferencia (model()) se ejecuta en paralelo en los miles de núcleos
+      de la GPU, lo que reduce drásticamente el tiempo de cálculo.
+2.  Flujo Secuencial:
+    - Las etapas del pipeline (Captura, Preprocesamiento, Inferencia, Postprocesamiento
+      y Visualización) se ejecutan de forma secuencial. La CPU debe esperar
+      a que cada etapa termine antes de pasar a la siguiente.
+"""
+
 from ultralytics import YOLO
 import cv2
 import time
@@ -99,7 +115,7 @@ def ejecutar_pipeline(video_path, model_path):
     fps = total_frames / duracion_total
     latencia = np.mean(tiempos)
 
-    print("\n=== RESULTADOS SECUENCIALES ===")
+    print("\n=== RESULTADOS SECUENCIALES (CUDA)===")
     print(f"Frames procesados: {total_frames}")
     print(f"Rostros detectados: {total_faces}")
     print(f"FPS promedio: {fps:.2f}")

@@ -1,7 +1,24 @@
+"""
+Este script implementa un pipeline paralelo del tipo Productor-Consumidor
+para maximizar el throughput de la inferencia de rostros en un video.
+
+Técnicas de Paralelismo Aplicadas:
+1.  Multiprocesamiento (multiprocessing.Process):
+    - Un proceso "Productor" (worker_preparacion_cpu) se dedica
+      exclusivamente a leer el video y preprocesar frames (resize) en un
+      núcleo de CPU.
+    - El proceso "Consumidor" (proceso principal) recibe los frames listos
+      para inferencia a través de una Cola (multiprocessing.Queue).
+2.  Paralelismo CPU/GPU (Overlap):
+    - El Consumidor utiliza la GPU para ejecutar la inferencia (model()).
+    - Mientras la GPU está ocupada procesando el "Frame A", la CPU ya está
+      preparando el "Frame B" en paralelo, ocultando la latencia de
+      preprocesamiento.
+"""
+
 import cv2
 import time
 import numpy as np
-import os
 from ultralytics import YOLO
 from multiprocessing import Process, Queue
 import torch
@@ -30,7 +47,7 @@ def preprocesar(frame):
     return frame_resized
 
 
-# Worker de captura y preprocesamiento
+# Worker de captura y preprocesamiento (Paralelo en CPU)
 def worker_preparacion_cpu(video_path, output_queue):
     cap = capturar_video(video_path)
     while True:
@@ -43,7 +60,7 @@ def worker_preparacion_cpu(video_path, output_queue):
     cap.release()
 
 
-# 3. Inferencia (modelo YOLO)
+# 3. Inferencia (Paralelo en GPU)
 def inferir(model, frame):
     results = model(frame, verbose=False)
     return results[0]
@@ -63,7 +80,7 @@ def postprocesar(frame, results):
 
 # 5. Visualización
 def visualizar(frame):
-    cv2.imshow("Deteccion Paralela (CPU)", frame)
+    cv2.imshow("Deteccion Paralela (GPU)", frame)
     return cv2.waitKey(1) & 0xFF != 27
 
 
@@ -132,7 +149,7 @@ def ejecutar_pipeline(video_path, model_path):
         fps_consumidor = total_frames / duracion_total
         latencia_consumidor = np.mean(tiempos_infer_post)
 
-        print("\n=== RESULTADOS PARALELOS (HU-02: GPU + CPU-Prepro) ===")
+        print("\n=== RESULTADOS PARALELOS ===")
         print(f"Frames procesados: {total_frames}")
         print(f"Rostros detectados: {total_faces}")
         print(f"FPS (Consumidor): {fps_consumidor:.2f}")
