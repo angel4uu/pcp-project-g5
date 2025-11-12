@@ -48,9 +48,8 @@ def inferir(model, frame):
 def postprocesar(frame, results):
     rostros_detectados = 0
     for box in results.boxes:
-        # Mover tensores a la CPU con .cpu()
-        x1, y1, x2, y2 = map(int, box.xyxy[0].cpu())
-        conf = float(box.conf[0].cpu())
+        x1, y1, x2, y2 = map(int, box.xyxy[0])
+        conf = float(box.conf[0])
         if conf > 0.5:
             rostros_detectados += 1
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
@@ -108,13 +107,14 @@ def ejecutar_pipeline(video_path, model_path):
     print("\n=== RESULTADOS SECUENCIALES (CPU) ===")
     print(f"Frames procesados: {total_frames}")
     print(f"Rostros detectados: {total_faces}")
+    print(f"Tiempo total: {duracion_total:.2f} s")
     print(f"FPS promedio: {fps:.2f}")
     print(f"Latencia promedio por frame: {latencia:.4f} s")
 
 
 # main, ejecución
 if __name__ == "__main__":
-    video_path = "videos/prueba1.mp4"  # o donde esté el video
+    video_path = "./videos/prueba2.mp4"  # o donde esté el video
     model_path = "../yolov8n-widerface-v2/best.pt"  # o donde esté el modelo
 
     ejecutar_pipeline(video_path, model_path)

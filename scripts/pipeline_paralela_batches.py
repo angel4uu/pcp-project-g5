@@ -14,6 +14,10 @@ Técnicas de Paralelismo Aplicadas:
     - Mientras la GPU está ocupada procesando el "Frame A", la CPU ya está
       preparando el "Frame B" en paralelo, ocultando la latencia de
       preprocesamiento.
+3.  Batching:
+    - El Consumidor agrupa los frames preprocesados en lotes (batches)
+      antes de enviarlos a la GPU, mejorando drásticamente el
+      throughput de la inferencia.
 """
 
 import cv2
@@ -31,6 +35,9 @@ print(
     if torch.cuda.is_available()
     else "CUDA no disponible"
 )
+
+# Tamaño del lote para inferencia
+BATCH_SIZE = 2
 
 
 # 1. Lectura de frames
@@ -61,9 +68,10 @@ def worker_preparacion_cpu(video_path, output_queue):
 
 
 # 3. Inferencia (Paralelo en GPU)
-def inferir(model, frame):
-    results = model(frame, verbose=False)
-    return results[0]
+def inferir(model, batch_de_frames):
+    # Procesa la lista completa de frames como un lote
+    results_list = model(batch_de_frames, verbose=False, stream=False)
+    return results_list
 
 
 # 4. Postprocesamiento
@@ -91,7 +99,9 @@ def ejecutar_pipeline(video_path, model_path):
     model.to(device)
 
     # Crear cola para frames preprocesados
-    preprocessed_queue = Queue(maxsize=5)
+    preprocessed_queue = Queue(
+        maxsize=BATCH_SIZE * 2
+    )  # Tamaño de cola mayor que el lote
 
     # Iniciar proceso de captura y preprocesamiento
     prepro_process = Process(
@@ -101,60 +111,88 @@ def ejecutar_pipeline(video_path, model_path):
     prepro_process.daemon = True
     prepro_process.start()
 
-    # Inicializar contadores y lista para tiempos
+    # Inicializar contadores y listas para tiempos
     total_frames = 0
     total_faces = 0
     tiempos_infer_post = []
+    tiempos_lote = []  # Tiempo por lote
+
+    # Bandera para manejar el fin del video
+    video_terminado = False
 
     # Bucle principal del consumidor
-    while True:
-        # Obtener frame preprocesado de la cola
-        frame_preprocesado = preprocessed_queue.get()
-        if frame_preprocesado is None:
+    while not video_terminado:
+        # Acumular un lote de frames desde la cola
+        batch_preprocesado = []
+        for _ in range(BATCH_SIZE):
+            frame = preprocessed_queue.get()
+            if frame is None:
+                video_terminado = True  # El productor terminó
+                break
+            batch_preprocesado.append(frame)
+
+        # Si el lote está vacío (porque el video terminó), salir
+        if not batch_preprocesado:
             break
 
-        # Medir tiempo de inferencia + postprocesamiento
+        # Guardar el número real de frames en este lote (puede ser < BATCH_SIZE al final)
+        frames_en_lote_actual = len(batch_preprocesado)
+
+        # Medir tiempo de inferencia + postprocesamiento del lote
         start = time.time()
 
         # Inferencia
-        results = inferir(model, frame_preprocesado)
+        results_list = inferir(model, batch_preprocesado)
+
+        # Crear listas para guardar los resultados del postprocesamiento
+        frames_para_visualizar = []
+        rostros_en_lote = 0
 
         # Postprocesamiento
-        frame_postprocesado, faces = postprocesar(frame_preprocesado, results)
+        for i in range(frames_en_lote_actual):
+            frame_original = batch_preprocesado[i]
+            results_individual = results_list[i]
+
+            frame_post, faces = postprocesar(frame_original, results_individual)
+            rostros_en_lote += faces
+            frames_para_visualizar.append(frame_post)
 
         # Asegurar sincronización de GPU
         torch.cuda.synchronize()
-
         end = time.time()
 
-        # Registrar tiempo de inferencia + postprocesamiento
-        tiempos_infer_post.append(end - start)
-
-        # Actualizar contadores
-        total_frames += 1
-        total_faces += faces
+        # Registrar tiempo del LOTE
+        tiempos_lote.append(end - start)
 
         # Visualización
-        if not visualizar(frame_postprocesado):
-            break
+        for frame_a_visualizar in frames_para_visualizar:
+            if not visualizar(frame_a_visualizar):
+                video_terminado = True
+                break
+
+        # Actualizar contadores
+        total_frames += frames_en_lote_actual
+        total_faces += rostros_en_lote
 
     # Limpiar y cerrar
     prepro_process.join(timeout=1)
     cv2.destroyAllWindows()
 
     # Mostrar resultados
-    if tiempos_infer_post:
-        # Mide el rendimiento del Consumidor
-        duracion_total = sum(tiempos_infer_post)
-        fps_consumidor = total_frames / duracion_total
-        latencia_consumidor = np.mean(tiempos_infer_post)
+    if tiempos_lote:
+        duracion_total = sum(tiempos_lote)
+        fps_total = total_frames / duracion_total
+        latencia_lote_promedio = np.mean(tiempos_lote)
+        latencia_frame_promedio = duracion_total / total_frames
 
-        print("\n=== RESULTADOS PARALELOS ===")
+        print("\n=== RESULTADOS PARALELOS CON BATCHING ===")
+        print(f"Número de batches: {BATCH_SIZE}")
         print(f"Frames procesados: {total_frames}")
         print(f"Rostros detectados: {total_faces}")
         print(f"Tiempo total: {duracion_total:.2f} s")
-        print(f"FPS promedio: {fps_consumidor:.2f}")
-        print(f"Latencia promedio por frame: {latencia_consumidor:.4f} s")
+        print(f"FPS promedio: {fps_total:.2f}")
+        print(f"Latencia promedio por lote: {latencia_lote_promedio:.4f} s")
+        print(f"Latencia promedio por frame: {latencia_frame_promedio:.4f} s")
     else:
         print("No se procesaron frames.")
 

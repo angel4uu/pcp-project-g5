@@ -118,13 +118,14 @@ def ejecutar_pipeline(video_path, model_path):
     print("\n=== RESULTADOS SECUENCIALES (CUDA)===")
     print(f"Frames procesados: {total_frames}")
     print(f"Rostros detectados: {total_faces}")
+    print(f"Tiempo total: {duracion_total:.2f} s")
     print(f"FPS promedio: {fps:.2f}")
     print(f"Latencia promedio por frame: {latencia:.4f} s")
 
 
 # main, ejecución
 if __name__ == "__main__":
-    video_path = "videos/prueba1.mp4"  # o donde esté el video
+    video_path = "./videos/prueba2.mp4"  # o donde esté el video
     model_path = "../yolov8n-widerface-v2/best.pt"  # o donde esté el modelo
     # Esto es para asegurar que se use CUDA.
     if str(device) == "cuda":
