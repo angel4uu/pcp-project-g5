@@ -37,7 +37,7 @@ print(
 )
 
 # Tamaño del lote para inferencia
-BATCH_SIZE = 4
+BATCH_SIZE = 64
 
 
 # 1. Lectura de frames
