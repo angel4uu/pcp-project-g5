@@ -219,7 +219,7 @@ int main() {
     std::cout << "Frames procesados: " << total_frames << std::endl;
     std::cout << "Rostros detectados: " << total_faces << std::endl;
     std::cout << "------------------------------------------" << std::endl;
-    std::cout << "🔥 FPS promedio (Throughput Total): " << fps << std::endl;
+    std::cout << "FPS promedio (Throughput Total): " << fps << std::endl;
     std::cout << "------------------------------------------" << std::endl;
     std::cout << "Latencia promedio (Infer + Post): " << latencia_avg_ms << " ms" << std::endl;
 

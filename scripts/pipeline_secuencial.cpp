@@ -14,7 +14,7 @@
 
 using namespace nvinfer1;
 
-// --- Logger de TensorRT (Boilerplate obligatorio) ---
+// Logger de TensorRT (Boilerplate obligatorio)
 class Logger : public ILogger {
     void log(Severity severity, const char* msg) noexcept override {
         if (severity != Severity::kINFO) {
@@ -23,10 +23,9 @@ class Logger : public ILogger {
     }
 } gLogger;
 
-// --- Función de Post-procesamiento (NMS) en C++ para UN frame ---
-// (Esta función no cambia)
+// Función de Post-procesamiento
 int postprocesar_cpp(float* output_buffer, float conf_threshold = 0.5, float nms_threshold = 0.45) {
-    const int num_proposals = 6300; // De tu log: (1, 5, 6300)
+    const int num_proposals = 6300;
 
     float* x_ptr = output_buffer;
     float* y_ptr = output_buffer + num_proposals;
@@ -54,19 +53,16 @@ int postprocesar_cpp(float* output_buffer, float conf_threshold = 0.5, float nms
     return indices.size();
 }
 
-
-// ... (todas las funciones de arriba, Logger, postprocesar_cpp, son iguales) ...
-
 int main() {
-    // --- Configuración ---
+    // Configuración
     const std::string video_path = "videos/prueba1.mp4";
     const std::string engine_path = "models/best_b1.engine";
     const int BATCH_SIZE = 1;
 
-    // --- 1. Cargar el Motor TensorRT ---
+    // 1. Cargar el Motor TensorRT
     std::ifstream file(engine_path, std::ios::binary);
 
-    if (!file.is_open()) { // .is_open() es CORRECTO para std::ifstream
+    if (!file.is_open()) { // .is_open() es correcto para std::ifstream
         std::cerr << "ERROR: No se pudo abrir el archivo del motor en: " << engine_path << std::endl;
         std::cerr << "Asegúrate de que el archivo existe y estás ejecutando esto desde la carpeta 'proyecto'." << std::endl;
         return -1;
@@ -97,7 +93,7 @@ int main() {
         return -1;
     }
 
-    // --- 2. Asignar Buffers (Memoria) ---
+    // 2. Asignar Buffers
     const int INPUT_SIZE = BATCH_SIZE * 3 * 480 * 640;
     const int OUTPUT_SIZE = BATCH_SIZE * 5 * 6300;
 
@@ -118,15 +114,14 @@ int main() {
     context->setTensorAddress(input_name, buffers[0]);
     context->setTensorAddress(output_name, buffers[1]);
 
-    // --- 3. Abrir Video ---
+    // 3. Abrir Video
     cv::VideoCapture cap(video_path);
-    // --- ¡CORRECCIÓN AQUÍ! ---
-    if (!cap.isOpened()) { // .isOpened() es el método correcto para OpenCV
+    if (!cap.isOpened()) {
         std::cerr << "Error al abrir el video en: " << video_path << std::endl;
         return -1;
     }
 
-    // --- 4. El Pipeline Secuencial ---
+    // 4. El Pipeline Secuencial
     int total_frames = 0;
     int total_faces = 0;
     std::vector<double> tiempos;
@@ -142,7 +137,7 @@ int main() {
 
         auto start = std::chrono::steady_clock::now();
 
-        // 1. Preprocesar (OpenCV C++)
+        // 1. Preprocesar
         cv::Mat blob = cv::dnn::blobFromImage(frame, 1.0 / 255.0, cv::Size(640, 480), cv::Scalar(), true, false);
 
         // 2. Inferir (TensorRT)
@@ -151,7 +146,7 @@ int main() {
         cudaMemcpyAsync(host_output_buffer.data(), buffers[1], OUTPUT_SIZE * sizeof(float), cudaMemcpyDeviceToHost, stream);
         cudaStreamSynchronize(stream);
 
-        // 3. Postprocesar (C++)
+        // 3. Postprocesar
         int faces_en_frame = postprocesar_cpp(host_output_buffer.data());
 
         auto end = std::chrono::steady_clock::now();
@@ -162,7 +157,7 @@ int main() {
         std::cout << "Procesados " << total_frames << " frames...\r" << std::flush;
     }
 
-    // --- 5. Limpieza y Reporte ---
+    // 5. Limpieza y Reporte
     cap.release();
     cudaStreamDestroy(stream);
     cudaFree(buffers[0]);
@@ -172,7 +167,6 @@ int main() {
     delete engine;
     delete runtime;
 
-    // ... (Reporte de métricas sin cambios) ...
     double duracion_total_ms = 0;
     for (double t : tiempos) duracion_total_ms += t;
     double duracion_total_s = duracion_total_ms / 1000.0;
@@ -184,7 +178,7 @@ int main() {
     std::cout << "Frames procesados: " << total_frames << std::endl;
     std::cout << "Rostros detectados: " << total_faces << std::endl;
     std::cout << "------------------------------------------" << std::endl;
-    std::cout << "🔥 FPS promedio (Throughput): " << fps << std::endl;
+    std::cout << "FPS promedio (Throughput): " << fps << std::endl;
     std::cout << "------------------------------------------" << std::endl;
     std::cout << "Latencia promedio por FRAME: " << latencia_ms << " ms" << std::endl;
 
